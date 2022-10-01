@@ -47,7 +47,7 @@ def getDelta(newCoords, oldCoords):
     return deltaAverage
 
 
-def diff(curCoords, nailNumber, nuckleNumber):
+def xDiff(curCoords, nailNumber, nuckleNumber):
     global buttonPressCounter
     if (curCoords):
         nuckleDiff = abs(curCoords[0].landmark[17].x - curCoords[0].landmark[5].x)
@@ -94,7 +94,7 @@ with mp_hands.Hands(
         print("calibration complete")
 
     if (len(calibratedCoords) > 0):
-        diff(results.multi_hand_landmarks, 8, 5)
+        xDiff(results.multi_hand_landmarks, 8, 5)
 
     '''if (calibrate and results != None):
         print("calibrating")
