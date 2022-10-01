@@ -10,6 +10,12 @@ mp_hands = mp.solutions.hands
 calibrate = True
 prevCoords = []
 calibratedCoords = []
+rt1Button = 0
+rt2Button = 0
+aButton = 0
+
+lt1Button = 0
+lt2Button = 0
 
 class Controller:
 	def __init__(self):
@@ -46,7 +52,6 @@ class Controller:
 		ret += "Joystick: " + str(self.joystick) + "\n"
 		ret += "A Button: " + str(self.Abutton) + "\n"
 		return ret
-
 
 
 def getDelta(newCoords, oldCoords):
@@ -174,11 +179,26 @@ with mp_hands.Hands(
 
 
                     if (rt1ButtonPressed == 1):
-                        print("R1 pressed")
+                        rt1Button +=1
+                        if(rt1Button < 2):
+                            print("R1 Pressed")
+                    else:
+                        rt1Button = 0
+
                     if (rt2ButtonPressed == 1):
-                        print("R2 Pressed")
+                        rt2Button += 1
+                        if(rt2Button < 2):
+                            print("R2 Pressed")
+                    else:
+                        rt2Button = 0
+
                     if (aButtonPressed == 1):
-                        print("A Pressed")
+                        aButton += 1
+                        if(aButton < 2):
+                            print("A Pressed")
+                    else:
+                        aButton = 0
+
                 elif (results.multi_handedness[i].classification[0].label == "Right"):
                     (lt1Movementdiff, lt1CalibratedMovementDiff) = xDiff(results.multi_hand_landmarks, 8, 5, i)
                     (lt2Movementdiff, lt2CalibratedMovementDiff) = xDiff(results.multi_hand_landmarks, 12, 9, i)
@@ -195,11 +215,20 @@ with mp_hands.Hands(
                     if (counter%3 == 0):
                         C = (temp_controllers[0] + temp_controllers[1] + temp_controllers[2])/3
                         print(C)
-
+                        
                     if (lt1ButtonPressed == 1):
-                        print("L1 pressed")
+                        lt1Button += 1
+                        if(lt1Button < 2):
+                            print("L1 Pressed")
+                    else:
+                        lt1Button = 0 
+
                     if (lt2ButtonPressed == 1):
-                        print("L2 Pressed")
+                        lt2Button += 1
+                        if(lt2Button < 2):
+                            print("A Pressed")
+                    else:
+                        lt2Button = 0                                          
 
     # Draw the hand annotations on the image.
     image.flags.writeable = True
