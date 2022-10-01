@@ -17,6 +17,8 @@ aButton = 0
 lt1Button = 0
 lt2Button = 0
 
+numPlayers = 1
+
 class Controller:
 	def __init__(self):
 		self.left_trigger = 0
@@ -128,14 +130,20 @@ def triggerPosition(movementDiff, calibratedMovementDiff):
 	ratio = min(ratio, 1)
 	return ratio
 
-C = Controller()
-temp_controllers = [Controller(), Controller(), Controller()]
+leftConroller = 0
+rightConroller = 0
+controllers = []
+temp_controllers = []
+for i in range(numPlayers):
+	controllers.append(Controller())
+	temp_controllers.append([Controller(), Controller(), Controller()])
 # For webcam input:
 cap = cv2.VideoCapture(0)
 startTime = datetime.datetime.now()
 counter = 0
 with mp_hands.Hands(
 	model_complexity=1,
+	max_num_hands=4,
 	min_detection_confidence=0.5,
 	min_tracking_confidence=0.7) as hands:
 	while cap.isOpened():
@@ -175,10 +183,11 @@ with mp_hands.Hands(
 						rt2ButtonPressed = checkButtonPress(rt2Movementdiff, rt2CalibratedMovementDiff, 0.87)
 						aButtonPressed = checkButtonPress(aMovementdiff, aCalibratedMovementDiff, 0.90)
 
-						temp_controllers[counter%3].right_trigger = rt1ButtonPressed
-						temp_controllers[counter%3].right_bumper = rt2ButtonPressed
-						temp_controllers[counter%3].Abutton = aButtonPressed
-
+						temp_controllers[leftConroller][counter%3].right_trigger = rt1ButtonPressed
+						temp_controllers[leftConroller][counter%3].right_bumper = rt2ButtonPressed
+						temp_controllers[leftConroller][counter%3].Abutton = aButtonPressed
+						if (counter%3 == 0):
+							controllers[leftConroller] = (temp_controllers[leftConroller][0] + temp_controllers[leftConroller][1] + temp_controllers[leftConroller][2])/3
 
 						if (rt1ButtonPressed == 1):
 							rt1Button +=1
@@ -200,7 +209,7 @@ with mp_hands.Hands(
 								print("A Pressed")
 						else:
 							aButton = 0
-
+						leftConroller+=1
 					elif (results.multi_handedness[i].classification[0].label == "Right"):
 						(lt1Movementdiff, lt1CalibratedMovementDiff) = xDiff(results.multi_hand_landmarks, 8, 5, i)
 						(lt2Movementdiff, lt2CalibratedMovementDiff) = xDiff(results.multi_hand_landmarks, 12, 9, i)
@@ -208,15 +217,15 @@ with mp_hands.Hands(
 						lt1ButtonPressed = checkButtonPress(lt1Movementdiff, lt1CalibratedMovementDiff, 0.90)
 						lt2ButtonPressed = checkButtonPress(lt2Movementdiff, lt2CalibratedMovementDiff, 0.90)
 
-						temp_controllers[counter%3].left_trigger = lt1ButtonPressed
-						temp_controllers[counter%3].left_bumper = lt2ButtonPressed
-
+						temp_controllers[rightConroller][counter%3].left_trigger = lt1ButtonPressed
+						temp_controllers[rightConroller][counter%3].left_bumper = lt2ButtonPressed
+						print(temp_controllers)
+						print(rightConroller)
 						m, c = xDiff(results.multi_hand_landmarks, 4, 5, i)
 						joystickPosition = triggerPosition(m,c)
-						temp_controllers[counter%3].joystick = joystickPosition
+						temp_controllers[rightConroller][counter%3].joystick = joystickPosition
 						if (counter%3 == 0):
-							C = (temp_controllers[0] + temp_controllers[1] + temp_controllers[2])/3
-							print(C)
+							controllers[rightConroller] = (temp_controllers[rightConroller][0] + temp_controllers[rightConroller][1] + temp_controllers[rightConroller][2])/3
 
 						if (lt1ButtonPressed == 1):
 							lt1Button += 1
@@ -231,7 +240,7 @@ with mp_hands.Hands(
 								print("A Pressed")
 						else:
 							lt2Button = 0
-
+						rightConroller+=1
 		# Draw the hand annotations on the image.
 		image.flags.writeable = True
 		image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
