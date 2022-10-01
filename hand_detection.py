@@ -1,4 +1,6 @@
+import datetime
 import mediapipe as mp
+import datetime
 import cv2
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
@@ -7,6 +9,7 @@ mp_hands = mp.solutions.hands
 calibrate = True
 prevCoords = []
 calibratedCoords = []
+buttonPressCounter = 0
 
 
 def getDelta(newCoords, oldCoords):
@@ -44,10 +47,27 @@ def getDelta(newCoords, oldCoords):
     return deltaAverage
 
 
+def diff(curCoords, nailNumber, nuckleNumber):
+    global buttonPressCounter
+    if (curCoords):
+        nuckleDiff = abs(curCoords[0].landmark[17].x - curCoords[0].landmark[5].x)
+        calibratednuckleDiff =  abs(calibratedCoords[0].landmark[17].x - calibratedCoords[0].landmark[5].x)
+        movementDiff = abs(curCoords[0].landmark[nailNumber].x - curCoords[0].landmark[nuckleNumber].x)
+        calibratedMovementDiff = abs(calibratedCoords[0].landmark[nailNumber].x - calibratedCoords[0].landmark[nuckleNumber].x) * nuckleDiff/calibratednuckleDiff
+
+        if (movementDiff < calibratedMovementDiff * 0.85):
+            buttonPressCounter += 1
+            if (buttonPressCounter > 2):
+                print("button pressed")
+                buttonPressCounter = 0
+        else:
+            buttonPressCounter = 0
+            print("\n")
 
 
 # For webcam input:
 cap = cv2.VideoCapture(0)
+startTime = datetime.datetime.now()
 with mp_hands.Hands(
     model_complexity=1,
     min_detection_confidence=0.5,
@@ -67,6 +87,15 @@ with mp_hands.Hands(
 
     # results.multi_hand_landmark stores each hand landmark x,y,z
     # do calibration
+
+    curTime = datetime.datetime.now()
+    if (2 < (curTime - startTime).total_seconds() < 3):
+        calibratedCoords = results.multi_hand_landmarks
+        print("calibration complete")
+
+    if (len(calibratedCoords) > 0):
+        diff(results.multi_hand_landmarks, 8, 5)
+
     '''if (calibrate and results != None):
         print("calibrating")
 
