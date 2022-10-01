@@ -9,7 +9,6 @@ mp_hands = mp.solutions.hands
 calibrate = True
 prevCoords = []
 calibratedCoords = []
-buttonPressCounter = 0
 
 
 def getDelta(newCoords, oldCoords):
@@ -46,23 +45,35 @@ def getDelta(newCoords, oldCoords):
     print(deltaAverage)
     return deltaAverage
 
+def checkButtonPress(movementDiff, calibratedMovementDiff, movementRatio):
+    if (movementDiff < calibratedMovementDiff * movementRatio):
+        return True
+    else:
+        return False
 
-def xDiff(curCoords, nailNumber, nuckleNumber):
-    global buttonPressCounter
-    if (curCoords):
-        nuckleDiff = abs(curCoords[0].landmark[17].x - curCoords[0].landmark[5].x)
-        calibratednuckleDiff =  abs(calibratedCoords[0].landmark[17].x - calibratedCoords[0].landmark[5].x)
-        movementDiff = abs(curCoords[0].landmark[nailNumber].x - curCoords[0].landmark[nuckleNumber].x)
-        calibratedMovementDiff = abs(calibratedCoords[0].landmark[nailNumber].x - calibratedCoords[0].landmark[nuckleNumber].x) * nuckleDiff/calibratednuckleDiff
 
-        if (movementDiff < calibratedMovementDiff * 0.85):
-            buttonPressCounter += 1
-            if (buttonPressCounter > 2):
-                print("button pressed")
-                buttonPressCounter = 0
-        else:
-            buttonPressCounter = 0
-            print("\n")
+def xDiff(curCoords, nailNumber, nuckleNumber, handNum):
+    if (curCoords and curCoords[handNum]):
+        nuckleDiff = abs(curCoords[handNum].landmark[17].y - curCoords[handNum].landmark[5].y)
+        calibratednuckleDiff =  abs(calibratedCoords[handNum].landmark[17].y - calibratedCoords[handNum].landmark[5].y)
+        movementDiff = abs(curCoords[handNum].landmark[nailNumber].x - curCoords[handNum].landmark[nuckleNumber].x)
+        calibratedMovementDiff = abs(calibratedCoords[handNum].landmark[nailNumber].x - calibratedCoords[handNum].landmark[nuckleNumber].x) * nuckleDiff/calibratednuckleDiff
+
+        return (movementDiff, calibratedMovementDiff)
+    else:
+        return (0,0)
+
+def yDiff(curCoords, nailNumber, nuckleNumber, handNum):
+    if (curCoords and curCoords[handNum]):
+        nuckleDiff = abs(curCoords[handNum].landmark[17].y - curCoords[handNum].landmark[5].y)
+        calibratednuckleDiff =  abs(calibratedCoords[handNum].landmark[17].y - calibratedCoords[handNum].landmark[5].y)
+        movementDiff = abs(curCoords[handNum].landmark[nailNumber].y - curCoords[handNum].landmark[nuckleNumber].y)
+        calibratedMovementDiff = abs(calibratedCoords[handNum].landmark[nailNumber].y - calibratedCoords[handNum].landmark[nuckleNumber].y) * nuckleDiff/calibratednuckleDiff
+
+        return (movementDiff, calibratedMovementDiff)
+    else:
+        return (0,0)
+
 
 
 # For webcam input:
@@ -93,20 +104,37 @@ with mp_hands.Hands(
         calibratedCoords = results.multi_hand_landmarks
         print("calibration complete")
 
-    if (len(calibratedCoords) > 0):
-        xDiff(results.multi_hand_landmarks, 8, 5)
+    if (calibratedCoords != None and len(calibratedCoords) > 0):
+        if results.multi_handedness != None:
+            for i in range(len(results.multi_handedness)):
+                if (results.multi_handedness[i].classification[0].label == "Left"):
+                    (rt1Movementdiff, rt1CalibratedMovementDiff) = xDiff(results.multi_hand_landmarks, 8, 5, i)
+                    (rt2Movementdiff, rt2CalibratedMovementDiff) = xDiff(results.multi_hand_landmarks, 12, 9, i)
+                    (aMovementdiff, aCalibratedMovementDiff) = yDiff(results.multi_hand_landmarks, 4, 5, i)
 
-    '''if (calibrate and results != None):
-        print("calibrating")
 
-        delta = getDelta(results.multi_hand_landmarks, prevCoords)
-        prevCoords = results.multi_hand_landmarks
-        if (delta <= 0.01):
-            calibratedCoords = results.multi_hand_landmarks
-            calibrate = False
+                    rt1ButtonPressed = checkButtonPress(rt1Movementdiff, rt1CalibratedMovementDiff, 0.85)
+                    rt2ButtonPressed = checkButtonPress(rt2Movementdiff, rt2CalibratedMovementDiff, 0.87)
+                    aButtonPressed = checkButtonPress(aMovementdiff, aCalibratedMovementDiff, 0.90)
 
-    print(calibratedCoords)
-    '''
+                    if (rt1ButtonPressed == True):
+                        print("R1 pressed")
+                    if (rt2ButtonPressed == True):
+                        print("R2 Pressed")
+                    if (aButtonPressed == True):
+                        print("A Pressed")
+                elif (results.multi_handedness[i].classification[0].label == "Right"):
+                    (lt1Movementdiff, lt1CalibratedMovementDiff) = xDiff(results.multi_hand_landmarks, 8, 5, i)
+                    (lt2Movementdiff, lt2CalibratedMovementDiff) = xDiff(results.multi_hand_landmarks, 12, 9, i)
+
+                    lt1ButtonPressed = checkButtonPress(lt1Movementdiff, lt1CalibratedMovementDiff, 0.90)
+                    lt2ButtonPressed = checkButtonPress(lt2Movementdiff, lt2CalibratedMovementDiff, 0.90)
+
+                    if (lt1ButtonPressed == True):
+                        print("L1 pressed")
+                    if (lt2ButtonPressed == True):
+                        print("L2 Pressed")
+
 
     # Draw the hand annotations on the image.
     image.flags.writeable = True
