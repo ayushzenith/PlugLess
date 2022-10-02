@@ -3,6 +3,7 @@ from shutil import move
 import mediapipe as mp
 import datetime
 import cv2
+from SwitchController import *
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 mp_hands = mp.solutions.hands
@@ -58,6 +59,8 @@ class Controller:
 		ret += "A Button: " + str(self.Abutton) + "\n"
 		return ret
 
+switch_controller = SwitchController()
+print(switch_controller.connected)
 
 def getDelta(newCoords, oldCoords):
 	deltaArray = [] # array of delta coords
@@ -212,6 +215,7 @@ with mp_hands.Hands(
 							rt1Button +=1
 							if(rt1Button < 2):
 								print("R1 Pressed")
+								switch_controller.startRProcess()
 								arrows.append([(130, 13), (110, 13), (0, 0, 255), 4, 0.5])
 						else:
 							rt1Button = 0
@@ -220,6 +224,7 @@ with mp_hands.Hands(
 							rt2Button += 1
 							if(rt2Button < 2):
 								print("R2 Pressed")
+								switch_controller.startZRProcess()
 								arrows.append([(130, 25), (110, 25), (0, 0, 255), 4, 0.5])
 						else:
 							rt2Button = 0
@@ -228,6 +233,7 @@ with mp_hands.Hands(
 							aButton += 1
 							if(aButton < 2):
 								print("A Pressed")
+								switch_controller.startThreadA()
 								arrows.append([(130, 65), (110, 65), (0, 0, 255), 4, 0.5])
 						else:
 							aButton = 0
@@ -255,6 +261,7 @@ with mp_hands.Hands(
 
 						joystickPosition = triggerPosition(m,c)
 						joystickPositionArr.append(joystickPosition)
+						switch_controller.startLeftProcess(min(max(int(joystickPosition * 100), -100), 100))
 
 						temp_controllers[rightConroller][counter%3].left_trigger = lt1ButtonPressed
 						temp_controllers[rightConroller][counter%3].left_bumper = lt2ButtonPressed
@@ -266,6 +273,7 @@ with mp_hands.Hands(
 							lt1Button += 1
 							if(lt1Button < 2):
 								print("L1 Pressed")
+								switch_controller.startLProcess()
 								arrows.append([(55, 13), (35, 13), (0, 0, 255), 4, 0.5])
 						else:
 							lt1Button = 0
@@ -274,13 +282,41 @@ with mp_hands.Hands(
 							lt2Button += 1
 							if(lt2Button < 2):
 								print("L2 Pressed")
+								switch_controller.startZLProcess()
 								arrows.append([(55, 25), (35, 25), (0, 0, 255), 4, 0.5])
 						else:
 							lt2Button = 0
 						rightConroller+=1
+
+						"""
+						if (controllers[0] is not None):
+							if(controllers[0].left_bumper == 0):
+								switch_controller.endZLProcess()
+							else:
+								switch_controller.startZLProcess()
+							if(controllers[0].right_bumper == 0):
+								switch_controller.endZRProcess()
+							else:
+								switch_controller.startZRProcess()
+							if(controllers[0].left_trigger == 0):
+								switch_controller.endLProcess()
+							else:
+								switch_controller.startLProcess()
+							if(controllers[0].right_trigger == 0):
+								switch_controller.endRProcess()
+							else:
+								switch_controller.startRProcess()
+							if(controllers[0].Abutton == 0):
+								switch_controller.endThreadA()
+							else:
+								switch_controller.startThreadA()
+						"""
+
+
 		# Draw the hand annotations on the image.
 		image.flags.writeable = True
 		image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+		"""
 		if results.multi_hand_landmarks:
 			for hand_landmarks in results.multi_hand_landmarks:
 				mp_drawing.draw_landmarks(
@@ -289,6 +325,7 @@ with mp_hands.Hands(
 					mp_hands.HAND_CONNECTIONS,
 					mp_drawing_styles.get_default_hand_landmarks_style(),
 					mp_drawing_styles.get_default_hand_connections_style())
+		"""
 		# Flip the image horizontally for a selfie-view display.
 		image = cv2.flip(image, 1)
 		image[0:joycon.shape[0], 0:joycon.shape[1]] = joycon
@@ -301,7 +338,9 @@ with mp_hands.Hands(
 
 		joystickPositionArr = []
 		arrows = []
-		cv2.imshow('MediaPipe Hands', image)
+		cv2.imshow('PlugLess', image)
+		cv2.waitKey(1)
+		#cv2.destroyAllWindows()
 		if cv2.waitKey(5) & 0xFF == 27:
 			break
 cap.release()
