@@ -163,6 +163,10 @@ with mp_hands.Hands(
 
 		curTime = datetime.datetime.now()
 		if (2 < (curTime - startTime).total_seconds() < 3):
+			image = cv2.flip(image, 1)
+			cv2.putText(image, "CALIBRATING", (int(image.shape[0]//2), int(image.shape[1]//10)),
+                    cv2.FONT_HERSHEY_SIMPLEX, 3, (0,0,255), 5)
+			image = cv2.flip(image, 1)
 			calibratedCoords = results.multi_hand_landmarks
 			print("calibration complete")
 		if (calibratedCoords != None and len(calibratedCoords) > 0):
@@ -262,7 +266,8 @@ with mp_hands.Hands(
 					mp_drawing_styles.get_default_hand_landmarks_style(),
 					mp_drawing_styles.get_default_hand_connections_style())
 		# Flip the image horizontally for a selfie-view display.
-		cv2.imshow('MediaPipe Hands', cv2.flip(image, 1))
+		image = cv2.flip(image, 1)
+		cv2.imshow('MediaPipe Hands', image)
 		if cv2.waitKey(5) & 0xFF == 27:
 			break
 cap.release()
