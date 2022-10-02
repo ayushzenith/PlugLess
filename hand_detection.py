@@ -18,6 +18,8 @@ lt1Button = 0
 lt2Button = 0
 
 numPlayers = 1
+arrows = []
+joystickPositionArr = []
 
 class Controller:
 	def __init__(self):
@@ -136,6 +138,9 @@ for i in range(numPlayers):
 cap = cv2.VideoCapture(0)
 startTime = datetime.datetime.now()
 counter = 0
+joycon = cv2.resize(cv2.imread("./joycon.jpg"),dsize=[110, 150])
+
+
 with mp_hands.Hands(
 	model_complexity=1,
 	max_num_hands=4,
@@ -162,11 +167,12 @@ with mp_hands.Hands(
 		# do calibration
 
 		curTime = datetime.datetime.now()
-		if (2 < (curTime - startTime).total_seconds() < 3):
+		if ((curTime - startTime).total_seconds() < 5):
 			image = cv2.flip(image, 1)
 			cv2.putText(image, "CALIBRATING", (int(image.shape[0]//2), int(image.shape[1]//10)),
                     cv2.FONT_HERSHEY_SIMPLEX, 3, (0,0,255), 5)
 			image = cv2.flip(image, 1)
+		if (4 < (curTime - startTime).total_seconds() < 5):
 			calibratedCoords = results.multi_hand_landmarks
 			print("calibration complete")
 		if (calibratedCoords != None and len(calibratedCoords) > 0):
@@ -174,14 +180,20 @@ with mp_hands.Hands(
 				for i in range(len(results.multi_handedness)):
 					if (results.multi_handedness[i].classification[0].label == "Left"):
 						if(leftConroller >= numPlayers):
-							print("Please move your hands into view")
+							image = cv2.flip(image, 1)
+							cv2.putText(image, "Please move your hands into view", (int(image.shape[0]//2), int(image.shape[1]//10)),
+								cv2.FONT_HERSHEY_SIMPLEX, 3, (255,0,0), 5)
+							image = cv2.flip(image, 1)
 							continue
-						try: 
+						try:
 							(rt1Movementdiff, rt1CalibratedMovementDiff) = xDiff(results.multi_hand_landmarks, 8, 5, i)
 							(rt2Movementdiff, rt2CalibratedMovementDiff) = xDiff(results.multi_hand_landmarks, 12, 9, i)
 							(aMovementdiff, aCalibratedMovementDiff) = yDiff(results.multi_hand_landmarks, 4, 5, i)
 						except IndexError:
-							print("Please move your hands into view")
+							image = cv2.flip(image, 1)
+							cv2.putText(image, "Please move your hands into view", (int(image.shape[0]//2), int(image.shape[1]//10)),
+								cv2.FONT_HERSHEY_SIMPLEX, 3, (255,0,0), 5)
+							image = cv2.flip(image, 1)
 							continue
 
 
@@ -200,6 +212,7 @@ with mp_hands.Hands(
 							rt1Button +=1
 							if(rt1Button < 2):
 								print("R1 Pressed")
+								arrows.append([(130, 13), (110, 13), (0, 0, 255), 4, 0.5])
 						else:
 							rt1Button = 0
 
@@ -207,6 +220,7 @@ with mp_hands.Hands(
 							rt2Button += 1
 							if(rt2Button < 2):
 								print("R2 Pressed")
+								arrows.append([(130, 25), (110, 25), (0, 0, 255), 4, 0.5])
 						else:
 							rt2Button = 0
 
@@ -214,25 +228,33 @@ with mp_hands.Hands(
 							aButton += 1
 							if(aButton < 2):
 								print("A Pressed")
+								arrows.append([(130, 65), (110, 65), (0, 0, 255), 4, 0.5])
 						else:
 							aButton = 0
 						leftConroller+=1
 					elif (results.multi_handedness[i].classification[0].label == "Right"):
 						if(rightConroller >= numPlayers):
-							print("please move your hand into view")
+							image = cv2.flip(image, 1)
+							cv2.putText(image, "Please move your hands into view", (int(image.shape[0]//2), int(image.shape[1]//10)),
+								cv2.FONT_HERSHEY_SIMPLEX, 3, (255,0,0), 5)
+							image = cv2.flip(image, 1)
 							continue
 						try:
 							(lt1Movementdiff, lt1CalibratedMovementDiff) = xDiff(results.multi_hand_landmarks, 8, 5, i)
 							(lt2Movementdiff, lt2CalibratedMovementDiff) = xDiff(results.multi_hand_landmarks, 12, 9, i)
 							m, c = xDiff(results.multi_hand_landmarks, 4, 5, i)
 						except:
-							print("Please move your hands into view")
+							image = cv2.flip(image, 1)
+							cv2.putText(image, "Please move your hands into view", (int(image.shape[0]//2), int(image.shape[1]//10)),
+								cv2.FONT_HERSHEY_SIMPLEX, 3, (255,0,0), 5)
+							image = cv2.flip(image, 1)
 							continue
 
 						lt1ButtonPressed = checkButtonPress(lt1Movementdiff, lt1CalibratedMovementDiff, 0.90)
 						lt2ButtonPressed = checkButtonPress(lt2Movementdiff, lt2CalibratedMovementDiff, 0.90)
 
 						joystickPosition = triggerPosition(m,c)
+						joystickPositionArr.append(joystickPosition)
 
 						temp_controllers[rightConroller][counter%3].left_trigger = lt1ButtonPressed
 						temp_controllers[rightConroller][counter%3].left_bumper = lt2ButtonPressed
@@ -244,6 +266,7 @@ with mp_hands.Hands(
 							lt1Button += 1
 							if(lt1Button < 2):
 								print("L1 Pressed")
+								arrows.append([(55, 13), (35, 13), (0, 0, 255), 4, 0.5])
 						else:
 							lt1Button = 0
 
@@ -251,6 +274,7 @@ with mp_hands.Hands(
 							lt2Button += 1
 							if(lt2Button < 2):
 								print("L2 Pressed")
+								arrows.append([(55, 25), (35, 25), (0, 0, 255), 4, 0.5])
 						else:
 							lt2Button = 0
 						rightConroller+=1
@@ -267,6 +291,16 @@ with mp_hands.Hands(
 					mp_drawing_styles.get_default_hand_connections_style())
 		# Flip the image horizontally for a selfie-view display.
 		image = cv2.flip(image, 1)
+		image[0:joycon.shape[0], 0:joycon.shape[1]] = joycon
+
+		for i in arrows:
+			image = cv2.arrowedLine(image, i[0], i[1], i[2], i[3], tipLength = i[4])
+
+		for i in joystickPositionArr:
+			image = cv2.putText(image, str(round(i, 5)), (10, 100), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+
+		joystickPositionArr = []
+		arrows = []
 		cv2.imshow('MediaPipe Hands', image)
 		if cv2.waitKey(5) & 0xFF == 27:
 			break
