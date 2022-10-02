@@ -104,10 +104,8 @@ def xDiff(curCoords, nailNumber, nuckleNumber, handNum):
 		calibratednuckleDiff =  abs(calibratedCoords[handNum].landmark[17].y - calibratedCoords[handNum].landmark[5].y)
 		movementDiff = abs(curCoords[handNum].landmark[nailNumber].x - curCoords[handNum].landmark[nuckleNumber].x)
 		calibratedMovementDiff = abs(calibratedCoords[handNum].landmark[nailNumber].x - calibratedCoords[handNum].landmark[nuckleNumber].x) * nuckleDiff/calibratednuckleDiff
-
 		return (movementDiff, calibratedMovementDiff)
-	else:
-		return (0,0)
+	return (0,0)
 
 def yDiff(curCoords, nailNumber, nuckleNumber, handNum):
 	if (curCoords and curCoords[handNum]):
@@ -115,14 +113,12 @@ def yDiff(curCoords, nailNumber, nuckleNumber, handNum):
 		calibratednuckleDiff =  abs(calibratedCoords[handNum].landmark[17].y - calibratedCoords[handNum].landmark[5].y)
 		movementDiff = abs(curCoords[handNum].landmark[nailNumber].y - curCoords[handNum].landmark[nuckleNumber].y)
 		calibratedMovementDiff = abs(calibratedCoords[handNum].landmark[nailNumber].y - calibratedCoords[handNum].landmark[nuckleNumber].y) * nuckleDiff/calibratednuckleDiff
-
 		return (movementDiff, calibratedMovementDiff)
-	else:
-		return (0,0)
+	return (0,0)
 
 def triggerPosition(movementDiff, calibratedMovementDiff):
 	if(not movementDiff):
-		return None
+		return 0
 	ratio = movementDiff/calibratedMovementDiff
 	ratio -= 1
 	ratio /= 0.75 # scaling param that has yet to be determined
@@ -130,8 +126,7 @@ def triggerPosition(movementDiff, calibratedMovementDiff):
 	ratio = min(ratio, 1)
 	return ratio
 
-leftConroller = 0
-rightConroller = 0
+
 controllers = []
 temp_controllers = []
 for i in range(numPlayers):
@@ -154,6 +149,8 @@ with mp_hands.Hands(
 			continue
 
 		counter += 1
+		leftConroller = 0
+		rightConroller = 0
 
 		# To improve performance, optionally mark the image as not writeable to
 		# pass by reference.
@@ -168,21 +165,27 @@ with mp_hands.Hands(
 		if (2 < (curTime - startTime).total_seconds() < 3):
 			calibratedCoords = results.multi_hand_landmarks
 			print("calibration complete")
-
 		if (calibratedCoords != None and len(calibratedCoords) > 0):
 			if results.multi_handedness != None:
 				for i in range(len(results.multi_handedness)):
 					if (results.multi_handedness[i].classification[0].label == "Left"):
-
-						(rt1Movementdiff, rt1CalibratedMovementDiff) = xDiff(results.multi_hand_landmarks, 8, 5, i)
-						(rt2Movementdiff, rt2CalibratedMovementDiff) = xDiff(results.multi_hand_landmarks, 12, 9, i)
-						(aMovementdiff, aCalibratedMovementDiff) = yDiff(results.multi_hand_landmarks, 4, 5, i)
+						if(leftConroller >= numPlayers):
+							print("Please move your hands into view")
+							continue
+						try: 
+							(rt1Movementdiff, rt1CalibratedMovementDiff) = xDiff(results.multi_hand_landmarks, 8, 5, i)
+							(rt2Movementdiff, rt2CalibratedMovementDiff) = xDiff(results.multi_hand_landmarks, 12, 9, i)
+							(aMovementdiff, aCalibratedMovementDiff) = yDiff(results.multi_hand_landmarks, 4, 5, i)
+						except IndexError:
+							print("Please move your hands into view")
+							continue
 
 
 						rt1ButtonPressed = checkButtonPress(rt1Movementdiff, rt1CalibratedMovementDiff, 0.85)
 						rt2ButtonPressed = checkButtonPress(rt2Movementdiff, rt2CalibratedMovementDiff, 0.87)
 						aButtonPressed = checkButtonPress(aMovementdiff, aCalibratedMovementDiff, 0.90)
 
+						print(leftConroller)
 						temp_controllers[leftConroller][counter%3].right_trigger = rt1ButtonPressed
 						temp_controllers[leftConroller][counter%3].right_bumper = rt2ButtonPressed
 						temp_controllers[leftConroller][counter%3].Abutton = aButtonPressed
@@ -211,18 +214,24 @@ with mp_hands.Hands(
 							aButton = 0
 						leftConroller+=1
 					elif (results.multi_handedness[i].classification[0].label == "Right"):
-						(lt1Movementdiff, lt1CalibratedMovementDiff) = xDiff(results.multi_hand_landmarks, 8, 5, i)
-						(lt2Movementdiff, lt2CalibratedMovementDiff) = xDiff(results.multi_hand_landmarks, 12, 9, i)
+						if(rightConroller >= numPlayers):
+							print("please move your hand into view")
+							continue
+						try:
+							(lt1Movementdiff, lt1CalibratedMovementDiff) = xDiff(results.multi_hand_landmarks, 8, 5, i)
+							(lt2Movementdiff, lt2CalibratedMovementDiff) = xDiff(results.multi_hand_landmarks, 12, 9, i)
+							m, c = xDiff(results.multi_hand_landmarks, 4, 5, i)
+						except:
+							print("Please move your hands into view")
+							continue
 
 						lt1ButtonPressed = checkButtonPress(lt1Movementdiff, lt1CalibratedMovementDiff, 0.90)
 						lt2ButtonPressed = checkButtonPress(lt2Movementdiff, lt2CalibratedMovementDiff, 0.90)
 
+						joystickPosition = triggerPosition(m,c)
+
 						temp_controllers[rightConroller][counter%3].left_trigger = lt1ButtonPressed
 						temp_controllers[rightConroller][counter%3].left_bumper = lt2ButtonPressed
-						print(temp_controllers)
-						print(rightConroller)
-						m, c = xDiff(results.multi_hand_landmarks, 4, 5, i)
-						joystickPosition = triggerPosition(m,c)
 						temp_controllers[rightConroller][counter%3].joystick = joystickPosition
 						if (counter%3 == 0):
 							controllers[rightConroller] = (temp_controllers[rightConroller][0] + temp_controllers[rightConroller][1] + temp_controllers[rightConroller][2])/3
@@ -237,7 +246,7 @@ with mp_hands.Hands(
 						if (lt2ButtonPressed == 1):
 							lt2Button += 1
 							if(lt2Button < 2):
-								print("A Pressed")
+								print("L2 Pressed")
 						else:
 							lt2Button = 0
 						rightConroller+=1
